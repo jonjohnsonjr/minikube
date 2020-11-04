@@ -54,10 +54,12 @@ var addonsConfigureCmd = &cobra.Command{
 			awsAccount := "changeme"
 			awsRole := "changeme"
 			gcrApplicationDefaultCredentials := "changeme"
+			arApplicationDefaultCredentials := "changeme"
 			dockerServer := "changeme"
 			dockerUser := "changeme"
 			dockerPass := "changeme"
 			gcrURL := "https://gcr.io"
+			arURL := "changeme"
 			acrURL := "changeme"
 			acrClientID := "changeme"
 			acrPassword := "changeme"
@@ -88,6 +90,21 @@ var addonsConfigureCmd = &cobra.Command{
 					out.FailureT("Error reading {{.path}}: {{.error}}", out.V{"path": gcrPath, "error": err})
 				} else {
 					gcrApplicationDefaultCredentials = string(dat)
+				}
+			}
+
+			enableAR := AskForYesNoConfirmation("\nDo you want to enable Artifact Registry?", posResponses, negResponses)
+			if enableAR {
+				arPath := AskForStaticValue("-- Enter path to credentials (e.g. /home/user/.config/gcloud/application_default_credentials.json):")
+				arURL = AskForStaticValue("-- Enter Artifact Registry URL: ")
+
+				// Read file from disk
+				dat, err := ioutil.ReadFile(arPath)
+
+				if err != nil {
+					out.FailureT("Error reading {{.path}}: {{.error}}", out.V{"path": arPath, "error": err})
+				} else {
+					arApplicationDefaultCredentials = string(dat)
 				}
 			}
 
@@ -146,6 +163,25 @@ var addonsConfigureCmd = &cobra.Command{
 
 			if err != nil {
 				out.FailureT("ERROR creating `registry-creds-gcr` secret: {{.error}}", out.V{"error": err})
+			}
+
+			// Create AR Secret
+			err = service.CreateSecret(
+				cname,
+				"kube-system",
+				"registry-creds-ar",
+				map[string]string{
+					"application_default_credentials.json": arApplicationDefaultCredentials,
+					"arurl":                                arURL,
+				},
+				map[string]string{
+					"app":                           "registry-ar",
+					"cloud":                         "ar",
+					"kubernetes.io/minikube-addons": "registry-ar",
+				})
+
+			if err != nil {
+				out.FailureT("ERROR creating `registry-creds-ar` secret: {{.error}}", out.V{"error": err})
 			}
 
 			// Create Docker Secret

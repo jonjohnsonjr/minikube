@@ -72,6 +72,11 @@ spec:
               secretKeyRef:
                 name: registry-creds-dpr
                 key: DOCKER_PRIVATE_REGISTRY_USER
+          - name: arurl
+            valueFrom:
+              secretKeyRef:
+                name: registry-creds-ar
+                key: arurl
           - name: gcrurl
             valueFrom:
               secretKeyRef:
@@ -93,10 +98,19 @@ spec:
                 name: registry-creds-acr
                 key: ACR_CLIENT_ID
         volumeMounts:
+        - name: ar-creds
+          mountPath: "/root/.config/gcloud"
+          readOnly: true
         - name: gcr-creds
           mountPath: "/root/.config/gcloud"
           readOnly: true
       volumes:
+      - name: ar-creds
+        secret:
+          secretName: registry-creds-ar
+          items:
+            - key: "application_default_credentials.json"
+              path: "application_default_credentials.json"
       - name: gcr-creds
         secret:
           secretName: registry-creds-gcr
